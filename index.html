@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Material Log</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF1F4; --panel:#FFFFFF; --ink:#1B2733; --ink-soft:#5B6B7A; --line:#DCE2E8;
+    --blue:#2C5282; --blue-dark:#1F3A5F; --blue-tint:#E7EEF6;
+    --green:#2F855A; --green-tint:#E6F4EC; --amber:#B7591C; --amber-tint:#FBEBDD;
+    --red:#C53030; --red-tint:#FBE7E7; --slate:#4A5568; --slate-tint:#EBEEF1;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; font-size:14px; -webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  #app{display:flex; flex-direction:column; height:100vh;}
+
+  /* ---- Auth screens ---- */
+  .auth-wrap{flex:1; display:flex; align-items:center; justify-content:center;}
+  .auth-card{background:#fff; padding:32px; border-radius:10px; width:360px; box-shadow:0 10px 30px rgba(20,30,45,0.08);}
+  .auth-card h1{font-size:18px; margin:0 0 4px;}
+  .auth-card p.sub{color:var(--ink-soft); font-size:12.5px; margin:0 0 20px;}
+  .auth-error{background:var(--red-tint); color:var(--red); font-size:12.5px; padding:8px 10px; border-radius:6px; margin-bottom:14px;}
+  .switch-link{text-align:center; font-size:12.5px; color:var(--ink-soft); margin-top:14px;}
+  .switch-link a{color:var(--blue); cursor:pointer; text-decoration:none; font-weight:600;}
+
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.03em;}
+  .field input, .field select{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-family:inherit; font-size:13px; background:#fff; color:var(--ink);}
+  .btn-primary{background:var(--blue); color:#fff; border:none; padding:10px 16px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; width:100%;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-primary:disabled{opacity:0.6; cursor:default;}
+
+  /* ---- Topbar ---- */
+  .topbar{background:var(--blue-dark); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .mark{font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:11px; letter-spacing:0.14em; background:rgba(255,255,255,0.12); padding:4px 8px; border-radius:3px; color:#CFE0F5;}
+  .brand h1{font-size:18px; font-weight:600; margin:0;}
+  .brand .sub{color:#9FB3C8; font-size:12px;}
+  .topbar-right{display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+  .report-date{display:flex; align-items:center; gap:8px; font-size:12px; color:#CFE0F5;}
+  .report-date input{background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; font-family:'IBM Plex Mono', monospace; font-size:12px; padding:5px 8px; border-radius:4px;}
+  .counters{display:flex; gap:10px;}
+  .counter{display:flex; flex-direction:column; align-items:center; padding:4px 12px; border-radius:6px; min-width:58px;}
+  .counter .n{font-family:'IBM Plex Mono', monospace; font-size:17px; font-weight:600; line-height:1.1;}
+  .counter .l{font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase; opacity:0.85; margin-top:2px;}
+  .counter.amber{background:rgba(255,255,255,0.1); color:#F5C68B;}
+  .counter.red{background:rgba(255,255,255,0.1); color:#F5A3A3;}
+  .counter.green{background:rgba(255,255,255,0.1); color:#9FE0BE;}
+  .logout-btn{background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; font-size:11.5px; padding:6px 10px; border-radius:5px; cursor:pointer;}
+
+  /* ---- Project picker ---- */
+  .projects-wrap{flex:1; display:flex; align-items:flex-start; justify-content:center; padding:60px 20px;}
+  .projects-card{background:#fff; padding:28px; border-radius:10px; width:420px; box-shadow:0 10px 30px rgba(20,30,45,0.08);}
+  .projects-card h2{font-size:16px; margin:0 0 16px;}
+  .project-row{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; cursor:pointer;}
+  .project-row:hover{border-color:var(--blue); background:var(--blue-tint);}
+  .new-project-row{display:flex; gap:8px; margin-top:14px;}
+  .new-project-row input{flex:1;}
+
+  /* ---- Body ---- */
+  .body-row{flex:1; display:flex; min-height:0;}
+  .sidebar{width:220px; background:var(--panel); border-right:1px solid var(--line); padding:16px 12px; overflow-y:auto; flex-shrink:0;}
+  .sidebar h2{font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); margin:4px 8px 10px;}
+  .back-link{font-size:12px; color:var(--blue); cursor:pointer; margin-bottom:14px; display:inline-block;}
+  .sub-item{display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; font-size:13px; color:var(--ink);}
+  .sub-item:hover{background:var(--bg);}
+  .sub-item.active{background:var(--blue-tint); color:var(--blue-dark); font-weight:600;}
+  .sub-item .cnt{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft);}
+  .sub-item.active .cnt{color:var(--blue);}
+  .add-sub-btn{width:100%; margin-top:8px; background:none; border:1px dashed var(--line); color:var(--ink-soft); font-size:12px; padding:8px; border-radius:6px; cursor:pointer;}
+  .add-sub-btn:hover{border-color:var(--blue); color:var(--blue);}
+  .sub-item .del{opacity:0; font-size:13px; color:var(--red); padding:0 4px;}
+  .sub-item:hover .del{opacity:0.6;}
+  .sub-item .del:hover{opacity:1;}
+
+  .main{flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden;}
+  .toolbar{padding:14px 22px 10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; background:var(--panel); border-bottom:1px solid var(--line);}
+  .filters{display:flex; gap:6px;}
+  .chip{padding:6px 12px; border-radius:16px; font-size:12px; border:1px solid var(--line); background:#fff; cursor:pointer; color:var(--ink-soft); font-weight:500;}
+  .chip.active{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .chip .n{font-family:'IBM Plex Mono', monospace; margin-left:4px;}
+
+  .table-wrap{flex:1; overflow:auto; padding:0 22px 22px;}
+  table{width:100%; border-collapse:collapse; margin-top:14px; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 1px 2px rgba(20,30,45,0.06);}
+  thead th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); font-weight:600; padding:10px 12px; border-bottom:1px solid var(--line); background:#F8FAFB; white-space:nowrap;}
+  tbody td{padding:11px 12px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle;}
+  tbody tr{border-left:4px solid transparent;}
+  tbody tr.st-order-now{border-left-color:var(--amber);}
+  tbody tr.st-late{border-left-color:var(--red);}
+  tbody tr.st-ordered{border-left-color:var(--slate);}
+  tbody tr.st-on-track{border-left-color:var(--green);}
+  tbody tr:hover{background:#FAFBFC;}
+  .mat-name{font-weight:600; color:var(--ink);}
+  .mat-sub{font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+  .badge{display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap;}
+  .badge::before{content:''; width:6px; height:6px; border-radius:50%;}
+  .badge.on-track{background:var(--green-tint); color:var(--green);} .badge.on-track::before{background:var(--green);}
+  .badge.order-now{background:var(--amber-tint); color:var(--amber);} .badge.order-now::before{background:var(--amber);}
+  .badge.late{background:var(--red-tint); color:var(--red);} .badge.late::before{background:var(--red);}
+  .badge.ordered{background:var(--slate-tint); color:var(--slate);} .badge.ordered::before{background:var(--slate);}
+  .days-left{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft);}
+  .days-left.warn{color:var(--amber); font-weight:600;}
+  .days-left.crit{color:var(--red); font-weight:600;}
+  .row-actions{display:flex; gap:8px; align-items:center;}
+  .icon-btn{background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; padding:4px 6px; border-radius:4px;}
+  .icon-btn:hover{background:var(--bg); color:var(--ink);}
+  .ordered-check{width:16px; height:16px; cursor:pointer;}
+  .empty-state{text-align:center; padding:60px 20px; color:var(--ink-soft);}
+  .empty-state h3{color:var(--ink); font-size:15px; margin-bottom:6px;}
+  .btn-primary.small{width:auto; padding:9px 16px;}
+
+  .overlay{position:fixed; inset:0; background:rgba(20,30,45,0.45); display:none; align-items:center; justify-content:center; z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff; border-radius:10px; width:440px; max-width:92vw; padding:22px 24px; box-shadow:0 20px 50px rgba(0,0,0,0.2);}
+  .modal h3{margin:0 0 16px; font-size:16px;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:18px;}
+  .btn-ghost{background:none; border:1px solid var(--line); color:var(--ink-soft); padding:9px 14px; border-radius:6px; font-size:13px; cursor:pointer;}
+  .hint{font-size:11.5px; color:var(--ink-soft); margin-top:-6px; margin-bottom:12px;}
+  .loading{padding:40px; text-align:center; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+/* ============ CONFIG ============ */
+// Point this at your deployed backend once it's live (e.g. https://your-app.onrender.com)
+const API_BASE = window.MATERIAL_LOG_API_BASE || "http://localhost:3001";
+
+/* ============ STATE ============ */
+let session = {
+  token: null,
+  user: null,
+  view: "login",          // login | signup | projects | tracker
+  authError: null,
+  projects: [],
+  currentProject: null,
+  subcontractors: [],
+  materials: [],
+  activeSub: "ALL",
+  activeFilter: "ALL",
+  reportDate: new Date().toISOString().slice(0,10),
+  orderWindowDays: 28,
+  loading: false,
+};
+
+/* ============ API HELPER ============ */
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+  if (session.token) headers.Authorization = `Bearer ${session.token}`;
+  const res = await fetch(API_BASE + path, { ...opts, headers });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+/* ============ DATE / STATUS LOGIC (same math as the source spreadsheet) ============ */
+function addDays(dateStr, n){ const d = new Date(dateStr+"T00:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00")) / 86400000); }
+function fmtDate(s){ if(!s) return "—"; return new Date(s+"T00:00:00").toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function computeOrderBy(m){ return addDays(m.needed_on_site_date, -(Math.round(m.lead_time_weeks*7))); }
+function computeStatus(m){
+  if(m.ordered) return "ORDERED";
+  const diff = daysBetween(session.reportDate, computeOrderBy(m));
+  if(diff < 0) return "LATE";
+  if(diff <= session.orderWindowDays) return "ORDER NOW";
+  return "ON TRACK";
+}
+function statusMeta(status){
+  switch(status){
+    case "ORDERED": return {cls:"ordered", label:"Ordered", row:"st-ordered"};
+    case "LATE": return {cls:"late", label:"Late", row:"st-late"};
+    case "ORDER NOW": return {cls:"order-now", label:"Order now", row:"st-order-now"};
+    default: return {cls:"on-track", label:"On track", row:"st-on-track"};
+  }
+}
+function escapeHtml(s){ return (s||"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ RENDER ROOT ============ */
+function render(){
+  if (session.view === "login" || session.view === "signup") return renderAuth();
+  if (session.view === "projects") return renderProjects();
+  return renderTracker();
+}
+
+/* ============ AUTH SCREENS ============ */
+function renderAuth(){
+  const isSignup = session.view === "signup";
+  document.getElementById('app').innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>Material Log</h1>
+        <p class="sub">${isSignup ? 'Create your account' : 'Sign in to your projects'}</p>
+        ${session.authError ? `<div class="auth-error">${escapeHtml(session.authError)}</div>` : ''}
+        ${isSignup ? `<div class="field"><label>Name</label><input id="f_name" type="text"></div>` : ''}
+        <div class="field"><label>Email</label><input id="f_email" type="email"></div>
+        <div class="field"><label>Password</label><input id="f_password" type="password"></div>
+        <button class="btn-primary" id="submitAuth" ${session.loading?'disabled':''}>${session.loading ? 'Please wait…' : (isSignup ? 'Create account' : 'Sign in')}</button>
+        <div class="switch-link">
+          ${isSignup ? `Already have an account? <a id="toLogin">Sign in</a>` : `New here? <a id="toSignup">Create an account</a>`}
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('submitAuth').addEventListener('click', submitAuth);
+  const toLogin = document.getElementById('toLogin');
+  const toSignup = document.getElementById('toSignup');
+  if(toLogin) toLogin.addEventListener('click', ()=>{ session.view='login'; session.authError=null; render(); });
+  if(toSignup) toSignup.addEventListener('click', ()=>{ session.view='signup'; session.authError=null; render(); });
+}
+
+async function submitAuth(){
+  const isSignup = session.view === "signup";
+  const email = document.getElementById('f_email').value.trim();
+  const password = document.getElementById('f_password').value;
+  const name = isSignup ? document.getElementById('f_name').value.trim() : undefined;
+  session.loading = true; session.authError = null; render();
+  try {
+    const data = await api(isSignup ? '/api/signup' : '/api/login', {
+      method: 'POST',
+      body: JSON.stringify(isSignup ? {email,password,name} : {email,password})
+    });
+    session.token = data.token;
+    session.user = data.user;
+    session.loading = false;
+    await loadProjects();
+    session.view = 'projects';
+    render();
+  } catch (err) {
+    session.loading = false;
+    session.authError = err.message;
+    render();
+  }
+}
+
+/* ============ PROJECTS SCREEN ============ */
+async function loadProjects(){
+  session.projects = await api('/api/projects');
+}
+
+function renderProjects(){
+  document.getElementById('app').innerHTML = `
+    <div class="topbar">
+      <div class="brand"><span class="mark">MATERIAL LOG</span><h1>Your projects</h1></div>
+      <button class="logout-btn" id="logoutBtn">Sign out</button>
+    </div>
+    <div class="projects-wrap">
+      <div class="projects-card">
+        <h2>Select a project</h2>
+        ${session.projects.length === 0 ? `<p style="color:var(--ink-soft); font-size:13px;">No projects yet — create your first one below.</p>` : ''}
+        ${session.projects.map(p => `<div class="project-row" data-project="${p.id}"><span>${escapeHtml(p.name)}</span><span class="mono" style="color:var(--ink-soft); font-size:11px;">open →</span></div>`).join('')}
+        <div class="new-project-row">
+          <input type="text" id="newProjectName" placeholder="New project name">
+          <button class="btn-primary small" id="createProjectBtn">Create</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+  document.querySelectorAll('[data-project]').forEach(el=>{
+    el.addEventListener('click', ()=>openProject(parseInt(el.getAttribute('data-project'))));
+  });
+  document.getElementById('createProjectBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('newProjectName').value.trim();
+    if(!name) return;
+    const proj = await api('/api/projects', { method:'POST', body: JSON.stringify({name}) });
+    session.projects.unshift(proj);
+    render();
+  });
+}
+
+async function openProject(projectId){
+  session.currentProject = session.projects.find(p=>p.id===projectId);
+  session.orderWindowDays = session.currentProject.order_window_days || 28;
+  await refreshProjectData();
+  session.view = 'tracker';
+  session.activeSub = 'ALL';
+  session.activeFilter = 'ALL';
+  render();
+}
+
+async function refreshProjectData(){
+  const pid = session.currentProject.id;
+  session.subcontractors = await api(`/api/projects/${pid}/subcontractors`);
+  session.materials = await api(`/api/projects/${pid}/materials`);
+}
+
+function logout(){
+  session = { ...session, token:null, user:null, view:'login', authError:null, projects:[], currentProject:null };
+  render();
+}
+
+/* ============ TRACKER SCREEN ============ */
+function renderTracker(){
+  const materials = session.materials.map(m => ({...m, orderBy: computeOrderBy(m), status: computeStatus(m)}));
+  const counts = {
+    "ORDER NOW": materials.filter(m=>m.status==="ORDER NOW").length,
+    "LATE": materials.filter(m=>m.status==="LATE").length,
+    "ON TRACK": materials.filter(m=>m.status==="ON TRACK").length,
+    "ORDERED": materials.filter(m=>m.status==="ORDERED").length,
+  };
+  const subCounts = {};
+  session.subcontractors.forEach(s => subCounts[s.id] = session.materials.filter(m=>m.subcontractor_id===s.id).length);
+
+  let visible = materials;
+  if(session.activeSub !== "ALL") visible = visible.filter(m => m.subcontractor_id === session.activeSub);
+  if(session.activeFilter !== "ALL") visible = visible.filter(m => m.status === session.activeFilter);
+  visible.sort((a,b) => daysBetween(session.reportDate, a.orderBy) - daysBetween(session.reportDate, b.orderBy));
+
+  document.getElementById('app').innerHTML = `
+    <div class="topbar">
+      <div class="brand">
+        <span class="mark">MATERIAL LOG</span>
+        <div><h1>${escapeHtml(session.currentProject.name)}</h1></div>
+      </div>
+      <div class="topbar-right">
+        <div class="report-date"><span>Report date</span><input type="date" id="reportDateInput" value="${session.reportDate}"></div>
+        <div class="counters">
+          <div class="counter red"><div class="n">${counts["LATE"]}</div><div class="l">Late</div></div>
+          <div class="counter amber"><div class="n">${counts["ORDER NOW"]}</div><div class="l">Order now</div></div>
+          <div class="counter green"><div class="n">${counts["ON TRACK"]}</div><div class="l">On track</div></div>
+        </div>
+        <button class="logout-btn" id="backToProjects">All projects</button>
+        <button class="logout-btn" id="logoutBtn">Sign out</button>
+      </div>
+    </div>
+    <div class="body-row">
+      <div class="sidebar">
+        <h2>Subcontractors</h2>
+        <div class="sub-item ${session.activeSub==='ALL'?'active':''}" data-sub="ALL"><span>All subs</span><span class="cnt">${session.materials.length}</span></div>
+        ${session.subcontractors.map(s => `
+          <div class="sub-item ${session.activeSub===s.id?'active':''}" data-sub="${s.id}">
+            <span>${escapeHtml(s.name)}</span>
+            <span class="cnt">${subCounts[s.id]||0}</span>
+            <span class="del" data-del-sub="${s.id}" title="Remove subcontractor">✕</span>
+          </div>
+        `).join('')}
+        <button class="add-sub-btn" id="addSubBtn">+ Add subcontractor</button>
+      </div>
+      <div class="main">
+        <div class="toolbar">
+          <div class="filters">
+            ${filterChip("ALL","All",materials.length)}
+            ${filterChip("LATE","Late",counts["LATE"])}
+            ${filterChip("ORDER NOW","Order now",counts["ORDER NOW"])}
+            ${filterChip("ON TRACK","On track",counts["ON TRACK"])}
+            ${filterChip("ORDERED","Ordered",counts["ORDERED"])}
+          </div>
+          <button class="btn-primary small" id="addMaterialBtn" ${session.subcontractors.length===0?'disabled title="Add a subcontractor first"':''}>+ Add material</button>
+        </div>
+        <div class="table-wrap">
+          ${visible.length === 0 ? `
+            <div class="empty-state"><h3>Nothing here yet</h3><p>${session.subcontractors.length===0 ? 'Add a subcontractor to get started.' : 'Add a material and assign it to a subcontractor to start tracking lead times.'}</p></div>
+          ` : `
+          <table>
+            <thead><tr><th>Material</th><th>Lead time</th><th>Needed on-site</th><th>Order by</th><th>Time left</th><th>Status</th><th>Ordered</th><th></th></tr></thead>
+            <tbody>${visible.map(renderRow).join('')}</tbody>
+          </table>`}
+        </div>
+      </div>
+    </div>
+  `;
+  attachTrackerEvents();
+}
+
+function filterChip(key,label,count){
+  return `<button class="chip ${session.activeFilter===key?'active':''}" data-filter="${key}">${label} <span class="n">${count}</span></button>`;
+}
+
+function renderRow(m){
+  const meta = statusMeta(m.status);
+  const diff = daysBetween(session.reportDate, m.orderBy);
+  const sub = session.subcontractors.find(s=>s.id===m.subcontractor_id);
+  let timeLeft = m.status === "ORDERED"
+    ? `<span class="days-left">ordered ${m.ordered_date ? fmtDate(m.ordered_date) : ''}</span>`
+    : diff < 0
+      ? `<span class="days-left crit">${Math.abs(diff)}d overdue</span>`
+      : `<span class="days-left ${diff<=session.orderWindowDays?'warn':''}">${diff}d left</span>`;
+  return `
+    <tr class="${meta.row}" data-id="${m.id}">
+      <td><div class="mat-name">${escapeHtml(m.name)}</div><div class="mat-sub">${escapeHtml(sub?.name||'')}</div></td>
+      <td class="mono">${m.lead_time_weeks} wk${m.lead_time_weeks==1?'':'s'}</td>
+      <td class="mono">${fmtDate(m.needed_on_site_date)}</td>
+      <td class="mono">${fmtDate(m.orderBy)}</td>
+      <td>${timeLeft}</td>
+      <td><span class="badge ${meta.cls}">${meta.label}</span></td>
+      <td><input type="checkbox" class="ordered-check" data-toggle-ordered="${m.id}" ${m.ordered?'checked':''}></td>
+      <td class="row-actions"><button class="icon-btn" data-edit="${m.id}" title="Edit">✎</button><button class="icon-btn" data-delete="${m.id}" title="Delete">🗑</button></td>
+    </tr>
+  `;
+}
+
+function attachTrackerEvents(){
+  document.getElementById('reportDateInput').addEventListener('change', e=>{ session.reportDate = e.target.value; render(); });
+  document.getElementById('backToProjects').addEventListener('click', ()=>{ session.view='projects'; render(); });
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+
+  document.querySelectorAll('[data-sub]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      if(e.target.closest('[data-del-sub]')) return;
+      const v = el.getAttribute('data-sub');
+      session.activeSub = v === 'ALL' ? 'ALL' : parseInt(v);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-del-sub]').forEach(el=>{
+    el.addEventListener('click', async e=>{
+      e.stopPropagation();
+      const id = parseInt(el.getAttribute('data-del-sub'));
+      if(session.materials.some(m=>m.subcontractor_id===id)){
+        alert('This subcontractor still has materials assigned. Reassign or delete those first.');
+        return;
+      }
+      await api(`/api/subcontractors/${id}`, { method:'DELETE' });
+      await refreshProjectData();
+      render();
+    });
+  });
+
+  document.getElementById('addSubBtn').addEventListener('click', openAddSubModal);
+  document.getElementById('addMaterialBtn').addEventListener('click', ()=>openMaterialModal(null));
+  document.querySelectorAll('[data-filter]').forEach(el=>{
+    el.addEventListener('click', ()=>{ session.activeFilter = el.getAttribute('data-filter'); render(); });
+  });
+  document.querySelectorAll('[data-toggle-ordered]').forEach(el=>{
+    el.addEventListener('change', async e=>{
+      const id = parseInt(el.getAttribute('data-toggle-ordered'));
+      const ordered = e.target.checked;
+      await api(`/api/materials/${id}`, { method:'PUT', body: JSON.stringify({ ordered, ordered_date: ordered ? session.reportDate : null }) });
+      await refreshProjectData();
+      render();
+    });
+  });
+  document.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('click', ()=>openMaterialModal(parseInt(el.getAttribute('data-edit'))));
+  });
+  document.querySelectorAll('[data-delete]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(confirm('Delete this material entry?')){
+        await api(`/api/materials/${el.getAttribute('data-delete')}`, { method:'DELETE' });
+        await refreshProjectData();
+        render();
+      }
+    });
+  });
+}
+
+/* ============ MODALS ============ */
+function openOverlay(html){ document.getElementById('modal').innerHTML = html; document.getElementById('overlay').classList.add('open'); }
+function closeOverlay(){ document.getElementById('overlay').classList.remove('open'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id === 'overlay') closeOverlay(); });
+
+function openAddSubModal(){
+  openOverlay(`
+    <h3>Add subcontractor</h3>
+    <div class="field"><label>Name</label><input type="text" id="newSubName" placeholder="e.g. Chesapeake Glazing"></div>
+    <div class="modal-actions"><button class="btn-ghost" id="cancelSub">Cancel</button><button class="btn-primary small" id="saveSub">Add</button></div>
+  `);
+  document.getElementById('cancelSub').addEventListener('click', closeOverlay);
+  document.getElementById('saveSub').addEventListener('click', async ()=>{
+    const val = document.getElementById('newSubName').value.trim();
+    if(!val) return;
+    await api(`/api/projects/${session.currentProject.id}/subcontractors`, { method:'POST', body: JSON.stringify({name: val}) });
+    await refreshProjectData();
+    closeOverlay();
+    render();
+  });
+  setTimeout(()=>document.getElementById('newSubName')?.focus(), 30);
+}
+
+function openMaterialModal(id){
+  const editing = !!id;
+  const m = editing ? session.materials.find(x=>x.id===id) : {
+    subcontractor_id: session.subcontractors[0]?.id, name:"", lead_time_weeks:4,
+    needed_on_site_date: addDays(session.reportDate, 30), notes:""
+  };
+  openOverlay(`
+    <h3>${editing ? 'Edit material' : 'Add material'}</h3>
+    <div class="field"><label>Material / task description</label><input type="text" id="f_name" value="${escapeHtml(m.name)}" placeholder="e.g. Aluminum railings - roof"></div>
+    <div class="field"><label>Subcontractor</label>
+      <select id="f_sub">${session.subcontractors.map(s=>`<option value="${s.id}" ${s.id===m.subcontractor_id?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Lead time (weeks)</label><input type="number" id="f_lead" min="0" value="${m.lead_time_weeks}"></div>
+      <div class="field"><label>Needed on-site by</label><input type="date" id="f_needed" value="${m.needed_on_site_date}"></div>
+    </div>
+    <div class="hint">Order-by date is calculated automatically: needed-on-site date minus lead time.</div>
+    <div class="field"><label>Notes</label><input type="text" id="f_notes" value="${escapeHtml(m.notes||'')}" placeholder="optional"></div>
+    <div class="modal-actions"><button class="btn-ghost" id="cancelMat">Cancel</button><button class="btn-primary small" id="saveMat">${editing ? 'Save changes' : 'Add material'}</button></div>
+  `);
+  document.getElementById('cancelMat').addEventListener('click', closeOverlay);
+  document.getElementById('saveMat').addEventListener('click', async ()=>{
+    const name = document.getElementById('f_name').value.trim();
+    if(!name){ alert('Give this material a name.'); return; }
+    const payload = {
+      name,
+      lead_time_weeks: parseFloat(document.getElementById('f_lead').value) || 0,
+      needed_on_site_date: document.getElementById('f_needed').value,
+      notes: document.getElementById('f_notes').value.trim(),
+    };
+    if(editing){
+      await api(`/api/materials/${id}`, { method:'PUT', body: JSON.stringify(payload) });
+    } else {
+      const subId = parseInt(document.getElementById('f_sub').value);
+      await api(`/api/subcontractors/${subId}/materials`, { method:'POST', body: JSON.stringify(payload) });
+    }
+    await refreshProjectData();
+    closeOverlay();
+    render();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
